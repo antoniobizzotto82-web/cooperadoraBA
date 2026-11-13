@@ -1,3 +1,4 @@
+// ignore_for_file: deprecated_member_use
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -510,7 +511,8 @@ class _TutorsPageState extends State<TutorsPage> {
                     leading: const CircleAvatar(
                         backgroundColor: navy, child: Icon(Icons.person, color: Colors.white)),
                     title: Text('${t['name']}'),
-                    subtitle: Text('Alumno/a: ${t['student']}\nWhatsApp: ${t['phone']}'),
+                    subtitle: Text('Alumno/a: ${t['student']}
+WhatsApp: ${t['phone']}'),
                     isThreeLine: true,
                   ),
                 );
@@ -641,7 +643,10 @@ class _HistoryPageState extends State<HistoryPage> {
                 child: ListTile(
                   title: Text('Comprobante N.º ${p['receiptNo']} - ${money(p['amount'] as num)}'),
                   subtitle: Text(
-                      'Tutor/a: ${p['tutorName']}\nAlumno/a: ${p['studentName']}\nFecha: $dateStr\nMétodo: ${p['method']}'),
+                      'Tutor/a: ${p['tutorName']}
+Alumno/a: ${p['studentName']}
+Fecha: $dateStr
+Método: ${p['method']}'),
                   isThreeLine: true,
                   trailing: IconButton(
                     icon: const Icon(Icons.share, color: navy),
@@ -657,12 +662,18 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Future<void> _shareReceipt(Map<String, Object?> p) async {
-    final text = 'Comprobante N.º ${p['receiptNo']}\n'
-        'Escuela: $schoolName\n'
-        'Tutor/a: ${p['tutorName']}\n'
-        'Alumno/a: ${p['studentName']}\n'
-        'Importe: ${money(p['amount'] as num)}\n'
-        'Medio: ${p['method']}\n'
+    final text = 'Comprobante N.º ${p['receiptNo']}
+'
+        'Escuela: $schoolName
+'
+        'Tutor/a: ${p['tutorName']}
+'
+        'Alumno/a: ${p['studentName']}
+'
+        'Importe: ${money(p['amount'] as num)}
+'
+        'Medio: ${p['method']}
+'
         'Fecha: ${p['date']}';
 
     final phone = phoneDigits('${p['tutorPhone']}');
