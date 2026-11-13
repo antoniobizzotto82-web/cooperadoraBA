@@ -1,0 +1,19 @@
+workflows:
+  android-apk:
+    name: Cooperadora Escuela 2 - APK Android
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      java: 17
+    scripts:
+      - name: Preparar plataforma Android
+        script: |
+          flutter create --platforms=android --org com.cooperadora --project-name cooperadora_escuela2 .
+      - name: Obtener dependencias
+        script: flutter pub get
+      - name: Analizar proyecto
+        script: flutter analyze
+      - name: Compilar APK release
+        script: flutter build apk --release
+    artifacts:
+      - build/app/outputs/flutter-apk/app-release.apk
