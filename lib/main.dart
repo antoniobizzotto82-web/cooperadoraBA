@@ -1,8 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -94,26 +92,34 @@ class AppDb {
 
   Future<void> saveProfile(String name, String phone, String role) async {
     await (await database).insert('profile',
-      {'id':  1, 'fullName': name, 'phone': phone, 'role': role},
+      {'id': 1, 'fullName': name, 'phone': phone, 'role': role},
       conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  Future<List>> tutors() async =>
-      (await database).query('tutors', orderBy: 'name COLLATE NOCASE');
+  Future<List>> tutors() async {
+    final db = await database;
+    return db.query('tutors', orderBy: 'name COLLATE NOCASE');
+  }
 
-  Future<int> addTutor(String name, String student, String phone) async =>
-      (await database).insert('tutors', {
-        'name': name, 'student': student, 'phone': phone,
-        'createdAt': DateTime.now().toIso8601String(),
-      });
+  Future<int> addTutor(String name, String student, String phone) async {
+    final db = await database;
+    return db.insert('tutors', {
+      'name': name,
+      'student': student,
+      'phone': phone,
+      'createdAt': DateTime.now().toIso8601String(),
+    });
+  }
 
-  Future<List>> payments() async =>
-      (await database).rawQuery('''
-        SELECT payments.*, tutors.name AS tutorName, tutors.phone AS tutorPhone,
-        tutors.student AS studentName
-        FROM payments JOIN tutors ON tutors.id=payments.tutorId
-        ORDER BY payments.receiptNo DESC
-      ''');
+  Future<List>> payments() async {
+    final db = await database;
+    return db.rawQuery('''
+      SELECT payments.*, tutors.name AS tutorName, tutors.phone AS tutorPhone,
+      tutors.student AS studentName
+      FROM payments JOIN tutors ON tutors.id=payments.tutorId
+      ORDER BY payments.receiptNo DESC
+    ''');
+  }
 
   Future<int> addPayment(int tutorId, double amount, String method, String note) async {
     final db = await database;
@@ -173,9 +179,9 @@ class _GatePageState extends State<GatePage> {
   @override
   void initState() { super.initState(); _check(); }
   Future<void> _check() async {
-    final profile = await AppDb.instance.profile();
+    final prof = await AppDb.instance.profile();
     if (!mounted) return;
-    if (profile == null) {
+    if (prof == null) {
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const SetupPage()));
     } else {
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomePage()));
@@ -298,9 +304,10 @@ class Dashboard extends StatelessWidget {
     future: Future.wait([AppDb.instance.totals(), AppDb.instance.tutors(), AppDb.instance.profile()]),
     builder: (context, snapshot) {
       if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-      final totals = snapshot.data![0] as Map<String, dynamic>;
-      final tutors = snapshot.data![1] as List>;
-      final profile = snapshot.data![2] as Map<String, Object?>?;
+      final dataList = snapshot.data as List<dynamic>;
+      final totals = dataList[0] as Map<String, dynamic>;
+      final tutors = dataList[1] as List>;
+      final profile = dataList[2] as Map<String, Object?>?;
       return ListView(padding: const EdgeInsets.all(16), children: [
         ClipRRect(borderRadius: BorderRadius.circular(18), child: Stack(alignment: Alignment.bottomLeft, children: [
           Image.asset('assets/images/fondo_cooperadora.jpg', height: 175, width: double.infinity, fit: BoxFit.cover),
@@ -346,7 +353,9 @@ class TutorsPage extends StatefulWidget {
 }
 class _TutorsPageState extends State<TutorsPage> {
   Future<void> add() async {
-    final name = TextEditingController(), student = TextEditingController(), phone = TextEditingController();
+    final name = TextEditingController();
+    final student = TextEditingController();
+    final phone = TextEditingController();
     final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
       title: const Text('Nuevo tutor/a'),
       content: SingleChildScrollView(child: Column(children: [
@@ -368,7 +377,7 @@ class _TutorsPageState extends State<TutorsPage> {
     floatingActionButton: FloatingActionButton.extended(onPressed: add, icon: const Icon(Icons.person_add), label: const Text('Agregar tutor')),
     body: FutureBuilder(future: AppDb.instance.tutors(), builder: (context, snap) {
       if (!snap.hasData) return const Center(child: CircularProgressIndicator());
-      final rows = snap.data!;
+      final rows = snap.data as List>;
       if (rows.isEmpty) return const Center(child: Text('Todavía no hay tutores registrados.'));
       return ListView.builder(padding: const EdgeInsets.only(bottom: 90), itemCount: rows.length, itemBuilder: (context, i) {
         final t = rows[i];
@@ -392,7 +401,8 @@ class PaymentsPage extends StatefulWidget {
 class _PaymentsPageState extends State<PaymentsPage> {
   int? tutorId;
   String method = 'Transferencia';
-  final amount = TextEditingController(), note = TextEditingController();
+  final amount = TextEditingController();
+  final note = TextEditingController();
   bool busy = false;
 
   Future<void> register() async {
@@ -414,14 +424,14 @@ class _PaymentsPageState extends State<PaymentsPage> {
     future: AppDb.instance.tutors(),
     builder: (context, snap) {
       if (!snap.hasData) return const Center(child: CircularProgressIndicator());
-      final tutors = snap.data!;
+      final tutors = snap.data as List>;
       if (tutors.isEmpty) return const Center(child: Text('Primero registrá al menos un tutor en la pestaña Tutores.'));
       tutorId ??= tutors.first['id'] as int;
       return ListView(padding: const EdgeInsets.all(16), children: [
         const Text('Registrar colaboración', style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold, color: navy)),
         const SizedBox(height: 16),
         DropdownButtonFormField<int>(
-          value: tutorId,
+          initialValue: tutorId,
           decoration: const InputDecoration(labelText: 'Tutor/a'),
           items: tutors.map((t) => DropdownMenuItem(value: t['id'] as int, child: Text('${t['name']}'))).toList(),
           onChanged: (v) => setState(() => tutorId = v),
@@ -430,7 +440,7 @@ class _PaymentsPageState extends State<PaymentsPage> {
         TextField(controller: amount, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Importe', prefixText: r'$ ')),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
-          value: method,
+          initialValue: method,
           decoration: const InputDecoration(labelText: 'Medio de pago'),
           items: const [DropdownMenuItem(value: 'Transferencia', child: Text('Transferencia')), DropdownMenuItem(value: 'Efectivo', child: Text('Efectivo'))],
           onChanged: (v) => setState(() => method = v ?? 'Transferencia'),
@@ -468,13 +478,11 @@ class _HistoryPageState extends State<HistoryPage> {
             padding: const EdgeInsets.all(12),
             itemCount: payments.length,
             itemBuilder: (context, i) {
-              const paymentKey = Key('payment_item'); // Opcional o const si aplica
               final p = payments[i];
               final dateStr = p['date'] != null 
                   ? DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(p['date'] as String)) 
                   : '';
               return Card(
-                key: paymentKey,
                 child: ListTile(
                   title: Text('Comprobante N.º ${p['receiptNo']} - ${money(p['amount'] as num)}'),
                   subtitle: Text('Tutor/a: ${p['tutorName']}\nAlumno/a: ${p['studentName']}\nFecha: $dateStr\nMétodo: ${p['method']}'),
