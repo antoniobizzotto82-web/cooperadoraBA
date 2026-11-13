@@ -85,18 +85,20 @@ class AppDb {
     return _db!;
   }
 
-  Future?> profile() async {
+  Future<Map<String, Object?>?> profile() async {
     final rows = await (await database).query('profile', where: 'id=1');
     return rows.isEmpty ? null : rows.first;
   }
 
   Future<void> saveProfile(String name, String phone, String role) async {
-    await (await database).insert('profile',
+    await (await database).insert(
+      'profile',
       {'id': 1, 'fullName': name, 'phone': phone, 'role': role},
-      conflictAlgorithm: ConflictAlgorithm.replace);
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
-  Future<List>> tutors() async {
+  Future<List<Map<String, Object?>>> tutors() async {
     final db = await database;
     return db.query('tutors', orderBy: 'name COLLATE NOCASE');
   }
@@ -111,7 +113,7 @@ class AppDb {
     });
   }
 
-  Future<List>> payments() async {
+  Future<List<Map<String, Object?>>> payments() async {
     final db = await database;
     return db.rawQuery('''
       SELECT payments.*, tutors.name AS tutorName, tutors.phone AS tutorPhone,
@@ -125,7 +127,9 @@ class AppDb {
     final db = await database;
     return db.transaction((txn) async {
       final next = Sqflite.firstIntValue(
-        await txn.rawQuery('SELECT COALESCE(MAX(receiptNo),0)+1 FROM payments')) ?? 1;
+            await txn.rawQuery('SELECT COALESCE(MAX(receiptNo),0)+1 FROM payments'),
+          ) ??
+          1;
       return txn.insert('payments', {
         'receiptNo': next,
         'tutorId': tutorId,
@@ -137,7 +141,7 @@ class AppDb {
     });
   }
 
-  Future> totals() async {
+  Future<Map<String, Object?>> totals() async {
     final db = await database;
     final rows = await db.rawQuery('''
       SELECT
@@ -150,7 +154,7 @@ class AppDb {
     return rows.first;
   }
 
-  Future> exportAll() async {
+  Future<Map<String, Object?>> exportAll() async {
     final db = await database;
     final profileRows = await db.query('profile');
     final tutorRows = await db.query('tutors', orderBy: 'id');
@@ -166,7 +170,8 @@ class AppDb {
   }
 }
 
-String money(num value) => NumberFormat.currency(locale: 'es_AR', symbol: r'$ ', decimalDigits: 2).format(value);
+String money(num value) =>
+    NumberFormat.currency(locale: 'es_AR', symbol: r'$ ', decimalDigits: 2).format(value);
 String phoneDigits(String value) => value.replaceAll(RegExp(r'[^0-9]'), '');
 
 class GatePage extends StatefulWidget {
@@ -177,7 +182,11 @@ class GatePage extends StatefulWidget {
 
 class _GatePageState extends State<GatePage> {
   @override
-  void initState() { super.initState(); _check(); }
+  void initState() {
+    super.initState();
+    _check();
+  }
+
   Future<void> _check() async {
     final prof = await AppDb.instance.profile();
     if (!mounted) return;
@@ -187,8 +196,10 @@ class _GatePageState extends State<GatePage> {
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomePage()));
     }
   }
+
   @override
-  Widget build(BuildContext context) => const Scaffold(body: Center(child: CircularProgressIndicator()));
+  Widget build(BuildContext context) =>
+      const Scaffold(body: Center(child: CircularProgressIndicator()));
 }
 
 class SetupPage extends StatefulWidget {
@@ -205,7 +216,8 @@ class _SetupPageState extends State<SetupPage> {
 
   Future<void> save() async {
     if (name.text.trim().isEmpty || phone.text.trim().isEmpty || role.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Completá nombre, celular y cargo.')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Completá nombre, celular y cargo.')));
       return;
     }
     setState(() => saving = true);
@@ -216,32 +228,68 @@ class _SetupPageState extends State<SetupPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    body: Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [navy, Color(0xFF174A70)])),
-      child: SafeArea(child: Center(child: SingleChildScrollView(
-        padding: const EdgeInsets.all(22),
-        child: Card(child: Padding(padding: const EdgeInsets.all(22), child: Column(
-          children: [
-            Image.asset('assets/images/fondo_cooperadora.jpg', height: 150, fit: BoxFit.contain),
-            const SizedBox(height: 12),
-            const Text('Bienvenido/a', style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold, color: navy)),
-            const Text('Configuración del titular de la aplicación'),
-            const SizedBox(height: 20),
-            TextField(controller: name, textCapitalization: TextCapitalization.words, decoration: const InputDecoration(labelText: 'Nombre y apellido completo')),
-            const SizedBox(height: 12),
-            TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Celular con código de área y país', hintText: 'Ej. 549266...')),
-            const SizedBox(height: 12),
-            TextField(controller: role, textCapitalization: TextCapitalization.sentences, decoration: const InputDecoration(labelText: 'Cargo en la Cooperadora')),
-            const SizedBox(height: 20),
-            FilledButton.icon(onPressed: saving ? null : save, icon: const Icon(Icons.save), label: const Text('Guardar y comenzar')),
-            const SizedBox(height: 8),
-            const Text('El número ingresado se usará como referencia del responsable. WhatsApp abrirá los chats para confirmar cada envío.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
-          ],
-        ))),
-      ))),
-    ),
-  );
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [navy, Color(0xFF174A70)],
+            ),
+          ),
+          child: SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(22),
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(22),
+                    child: Column(
+                      children: [
+                        Image.asset('assets/images/fondo_cooperadora.jpg',
+                            height: 150, fit: BoxFit.contain),
+                        const SizedBox(height: 12),
+                        const Text('Bienvenido/a',
+                            style: TextStyle(
+                                fontSize: 25, fontWeight: FontWeight.bold, color: navy)),
+                        const Text('Configuración del titular de la aplicación'),
+                        const SizedBox(height: 20),
+                        TextField(
+                            controller: name,
+                            textCapitalization: TextCapitalization.words,
+                            decoration:
+                                const InputDecoration(labelText: 'Nombre y apellido completo')),
+                        const SizedBox(height: 12),
+                        TextField(
+                            controller: phone,
+                            keyboardType: TextInputType.phone,
+                            decoration: const InputDecoration(
+                                labelText: 'Celular con código de área y país',
+                                hintText: 'Ej. 549266...')),
+                        const SizedBox(height: 12),
+                        TextField(
+                            controller: role,
+                            textCapitalization: TextCapitalization.sentences,
+                            decoration:
+                                const InputDecoration(labelText: 'Cargo en la Cooperadora')),
+                        const SizedBox(height: 20),
+                        FilledButton.icon(
+                            onPressed: saving ? null : save,
+                            icon: const Icon(Icons.save),
+                            label: const Text('Guardar y comenzar')),
+                        const SizedBox(height: 8),
+                        const Text(
+                            'El número ingresado se usará como referencia del responsable. WhatsApp abrirá los chats para confirmar cada envío.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
 }
 
 class HomePage extends StatefulWidget {
@@ -253,7 +301,10 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int tab = 0;
   int refreshKey = 0;
-  Future<void> refresh() async { setState(() => refreshKey++); }
+  Future<void> refresh() async {
+    setState(() => refreshKey++);
+  }
+
   @override
   Widget build(BuildContext context) {
     final pages = [
@@ -265,7 +316,12 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Cooperadora · Escuela N.º 2'),
-        actions: [IconButton(tooltip: 'Exportar respaldo', onPressed: exportBackup, icon: const Icon(Icons.backup))],
+        actions: [
+          IconButton(
+              tooltip: 'Exportar respaldo',
+              onPressed: exportBackup,
+              icon: const Icon(Icons.backup))
+        ],
       ),
       body: pages[tab],
       bottomNavigationBar: NavigationBar(
@@ -288,9 +344,13 @@ class _HomePageState extends State<HomePage> {
       final stamp = DateFormat('yyyyMMdd_HHmm').format(DateTime.now());
       final file = File(p.join(dir.path, 'respaldo_cooperadora_$stamp.json'));
       await file.writeAsString(const JsonEncoder.withIndent('  ').convert(data));
-      await Share.shareXFiles([XFile(file.path)], text: 'Respaldo de la Cooperadora - $schoolName');
+      await Share.shareXFiles([XFile(file.path)],
+          text: 'Respaldo de la Cooperadora - $schoolName');
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudo exportar: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('No se pudo exportar: $e')));
+      }
     }
   }
 }
@@ -300,50 +360,90 @@ class Dashboard extends StatelessWidget {
   const Dashboard({super.key, required this.onChanged});
 
   @override
-  Widget build(BuildContext context) => FutureBuilder(
-    future: Future.wait([AppDb.instance.totals(), AppDb.instance.tutors(), AppDb.instance.profile()]),
-    builder: (context, snapshot) {
-      if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-      final dataList = snapshot.data as List<dynamic>;
-      final totals = dataList[0] as Map<String, dynamic>;
-      final tutors = dataList[1] as List>;
-      final profile = dataList[2] as Map<String, Object?>?;
-      return ListView(padding: const EdgeInsets.all(16), children: [
-        ClipRRect(borderRadius: BorderRadius.circular(18), child: Stack(alignment: Alignment.bottomLeft, children: [
-          Image.asset('assets/images/fondo_cooperadora.jpg', height: 175, width: double.infinity, fit: BoxFit.cover),
-          Container(height: 175, decoration: BoxDecoration(gradient: LinearGradient(colors: [navy.withValues(alpha: 0.85), Colors.transparent], begin: Alignment.bottomLeft, end: Alignment.topRight))),
-          Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('COMISIÓN COOPERADORA', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-            Text(schoolName, style: const TextStyle(color: Colors.white, fontSize: 15)),
-            if (profile != null) Text('${profile['fullName']} · ${profile['role']}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
-          ])),
-        ])),
-        const SizedBox(height: 16),
-        _stat('Total recaudado', money((totals['total'] as num)), Icons.account_balance_wallet, navy),
-        Row(children: [
-          Expanded(child: _stat('Transferencias', money(totals['transfer'] as num), Icons.account_balance, Colors.blue.shade800)),
-          const SizedBox(width: 10),
-          Expanded(child: _stat('Efectivo', money(totals['cash'] as num), Icons.payments, Colors.green.shade800)),
+  Widget build(BuildContext context) => FutureBuilder<List<dynamic>>(
+        future: Future.wait([
+          AppDb.instance.totals(),
+          AppDb.instance.tutors(),
+          AppDb.instance.profile(),
         ]),
-        Row(children: [
-          Expanded(child: _stat('Pagos registrados', '${totals['count']}', Icons.receipt, navy)),
-          const SizedBox(width: 10),
-          Expanded(child: _stat('Tutores registrados', '${tutors.length}', Icons.people, navy)),
-        ]),
-        const SizedBox(height: 10),
-        const Card(child: Padding(padding: EdgeInsets.all(14), child: Text('Los datos se guardan en este teléfono. Exportá un respaldo con el ícono de la nube antes de cambiar o reiniciar el dispositivo.'))),
-      ]);
-    },
-  );
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          final dataList = snapshot.data!;
+          final totals = dataList[0] as Map<String, Object?>;
+          final tutors = dataList[1] as List<Map<String, Object?>>;
+          final profile = dataList[2] as Map<String, Object?>?;
+          return ListView(padding: const EdgeInsets.all(16), children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: Stack(alignment: Alignment.bottomLeft, children: [
+                Image.asset('assets/images/fondo_cooperadora.jpg',
+                    height: 175, width: double.infinity, fit: BoxFit.cover),
+                Container(
+                  height: 175,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [navy.withValues(alpha: 0.85), Colors.transparent],
+                      begin: Alignment.bottomLeft,
+                      end: Alignment.topRight,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Text('COMISIÓN COOPERADORA',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+                    Text(schoolName, style: const TextStyle(color: Colors.white, fontSize: 15)),
+                    if (profile != null)
+                      Text('${profile['fullName']} · ${profile['role']}',
+                          style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                  ]),
+                ),
+              ]),
+            ),
+            const SizedBox(height: 16),
+            _stat('Total recaudado', money((totals['total'] as num)),
+                Icons.account_balance_wallet, navy),
+            Row(children: [
+              Expanded(
+                  child: _stat('Transferencias', money(totals['transfer'] as num),
+                      Icons.account_balance, Colors.blue.shade800)),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: _stat('Efectivo', money(totals['cash'] as num), Icons.payments,
+                      Colors.green.shade800)),
+            ]),
+            Row(children: [
+              Expanded(
+                  child: _stat('Pagos registrados', '${totals['count']}', Icons.receipt, navy)),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: _stat('Tutores registrados', '${tutors.length}', Icons.people, navy)),
+            ]),
+            const SizedBox(height: 10),
+            const Card(
+                child: Padding(
+                    padding: EdgeInsets.all(14),
+                    child: Text(
+                        'Los datos se guardan en este teléfono. Exportá un respaldo con el ícono de la nube antes de cambiar o reiniciar el dispositivo.'))),
+          ]);
+        },
+      );
 }
 
-Widget _stat(String title, String value, IconData icon, Color color) =>
-  Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    Icon(icon, color: color), const SizedBox(height: 8),
-    Text(title, style: const TextStyle(fontSize: 12, color: Colors.black54)),
-    const SizedBox(height: 4),
-    Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-  ])));
+Widget _stat(String title, String value, IconData icon, Color color) => Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Icon(icon, color: color),
+          const SizedBox(height: 8),
+          Text(title, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+          const SizedBox(height: 4),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+        ]),
+      ),
+    );
 
 class TutorsPage extends StatefulWidget {
   final VoidCallback onChanged;
@@ -351,45 +451,74 @@ class TutorsPage extends StatefulWidget {
   @override
   State<TutorsPage> createState() => _TutorsPageState();
 }
+
 class _TutorsPageState extends State<TutorsPage> {
   Future<void> add() async {
     final name = TextEditingController();
     final student = TextEditingController();
     final phone = TextEditingController();
-    final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
-      title: const Text('Nuevo tutor/a'),
-      content: SingleChildScrollView(child: Column(children: [
-        TextField(controller: name, decoration: const InputDecoration(labelText: 'Nombre y apellido del tutor')),
-        const SizedBox(height: 10),
-        TextField(controller: student, decoration: const InputDecoration(labelText: 'Alumno/a')),
-        const SizedBox(height: 10),
-        TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'WhatsApp (con código de país)')),
-      ])),
-      actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')), FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Guardar'))],
-    ));
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Nuevo tutor/a'),
+        content: SingleChildScrollView(
+          child: Column(children: [
+            TextField(
+                controller: name,
+                decoration: const InputDecoration(labelText: 'Nombre y apellido del tutor')),
+            const SizedBox(height: 10),
+            TextField(controller: student, decoration: const InputDecoration(labelText: 'Alumno/a')),
+            const SizedBox(height: 10),
+            TextField(
+                controller: phone,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(labelText: 'WhatsApp (con código de país)')),
+          ]),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Guardar')),
+        ],
+      ),
+    );
     if (ok == true && name.text.trim().isNotEmpty && phoneDigits(phone.text).isNotEmpty) {
       await AppDb.instance.addTutor(name.text.trim(), student.text.trim(), phoneDigits(phone.text));
       widget.onChanged();
     }
   }
+
   @override
   Widget build(BuildContext context) => Scaffold(
-    floatingActionButton: FloatingActionButton.extended(onPressed: add, icon: const Icon(Icons.person_add), label: const Text('Agregar tutor')),
-    body: FutureBuilder(future: AppDb.instance.tutors(), builder: (context, snap) {
-      if (!snap.hasData) return const Center(child: CircularProgressIndicator());
-      final rows = snap.data as List>;
-      if (rows.isEmpty) return const Center(child: Text('Todavía no hay tutores registrados.'));
-      return ListView.builder(padding: const EdgeInsets.only(bottom: 90), itemCount: rows.length, itemBuilder: (context, i) {
-        final t = rows[i];
-        return Card(margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5), child: ListTile(
-          leading: const CircleAvatar(backgroundColor: navy, child: Icon(Icons.person, color: Colors.white)),
-          title: Text('${t['name']}'),
-          subtitle: Text('Alumno/a: ${t['student']}\nWhatsApp: ${t['phone']}'),
-          isThreeLine: true,
-        ));
-      });
-    }),
-  );
+        floatingActionButton: FloatingActionButton.extended(
+            onPressed: add, icon: const Icon(Icons.person_add), label: const Text('Agregar tutor')),
+        body: FutureBuilder<List<Map<String, Object?>>>(
+          future: AppDb.instance.tutors(),
+          builder: (context, snap) {
+            if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+            final rows = snap.data!;
+            if (rows.isEmpty) {
+              return const Center(child: Text('Todavía no hay tutores registrados.'));
+            }
+            return ListView.builder(
+              padding: const EdgeInsets.only(bottom: 90),
+              itemCount: rows.length,
+              itemBuilder: (context, i) {
+                final t = rows[i];
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                  child: ListTile(
+                    leading: const CircleAvatar(
+                        backgroundColor: navy, child: Icon(Icons.person, color: Colors.white)),
+                    title: Text('${t['name']}'),
+                    subtitle: Text('Alumno/a: ${t['student']}\nWhatsApp: ${t['phone']}'),
+                    isThreeLine: true,
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      );
 }
 
 class PaymentsPage extends StatefulWidget {
@@ -398,6 +527,7 @@ class PaymentsPage extends StatefulWidget {
   @override
   State<PaymentsPage> createState() => _PaymentsPageState();
 }
+
 class _PaymentsPageState extends State<PaymentsPage> {
   int? tutorId;
   String method = 'Transferencia';
@@ -408,52 +538,77 @@ class _PaymentsPageState extends State<PaymentsPage> {
   Future<void> register() async {
     final value = double.tryParse(amount.text.replaceAll(',', '.'));
     if (tutorId == null || value == null || value <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Elegí un tutor e ingresá un importe válido.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Elegí un tutor e ingresá un importe válido.')));
       return;
     }
     setState(() => busy = true);
     await AppDb.instance.addPayment(tutorId!, value, method, note.text.trim());
-    setState(() { busy = false; amount.clear(); note.clear(); });
+    setState(() {
+      busy = false;
+      amount.clear();
+      note.clear();
+    });
     widget.onChanged();
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pago registrado y comprobante numerado.')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Pago registrado y comprobante numerado.')));
   }
 
   @override
-  Widget build(BuildContext context) => FutureBuilder(
-    future: AppDb.instance.tutors(),
-    builder: (context, snap) {
-      if (!snap.hasData) return const Center(child: CircularProgressIndicator());
-      final tutors = snap.data as List>;
-      if (tutors.isEmpty) return const Center(child: Text('Primero registrá al menos un tutor en la pestaña Tutores.'));
-      tutorId ??= tutors.first['id'] as int;
-      return ListView(padding: const EdgeInsets.all(16), children: [
-        const Text('Registrar colaboración', style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold, color: navy)),
-        const SizedBox(height: 16),
-        DropdownButtonFormField<int>(
-          initialValue: tutorId,
-          decoration: const InputDecoration(labelText: 'Tutor/a'),
-          items: tutors.map((t) => DropdownMenuItem(value: t['id'] as int, child: Text('${t['name']}'))).toList(),
-          onChanged: (v) => setState(() => tutorId = v),
-        ),
-        const SizedBox(height: 12),
-        TextField(controller: amount, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Importe', prefixText: r'$ ')),
-        const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
-          initialValue: method,
-          decoration: const InputDecoration(labelText: 'Medio de pago'),
-          items: const [DropdownMenuItem(value: 'Transferencia', child: Text('Transferencia')), DropdownMenuItem(value: 'Efectivo', child: Text('Efectivo'))],
-          onChanged: (v) => setState(() => method = v ?? 'Transferencia'),
-        ),
-        const SizedBox(height: 12),
-        TextField(controller: note, decoration: const InputDecoration(labelText: 'Observación (opcional)')),
-        const SizedBox(height: 20),
-        FilledButton.icon(onPressed: busy ? null : register, icon: const Icon(Icons.check_circle), label: const Text('Registrar pago')),
-        const SizedBox(height: 10),
-        const Text('Al guardar se asigna el próximo número correlativo de comprobante. Luego podés compartir el comprobante desde Historial.', style: TextStyle(color: Colors.black54)),
-      ]);
-    },
-  );
+  Widget build(BuildContext context) => FutureBuilder<List<Map<String, Object?>>>(
+        future: AppDb.instance.tutors(),
+        builder: (context, snap) {
+          if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+          final tutors = snap.data!;
+          if (tutors.isEmpty) {
+            return const Center(
+                child: Text('Primero registrá al menos un tutor en la pestaña Tutores.'));
+          }
+          tutorId ??= tutors.first['id'] as int;
+          return ListView(padding: const EdgeInsets.all(16), children: [
+            const Text('Registrar colaboración',
+                style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold, color: navy)),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<int>(
+              initialValue: tutorId,
+              decoration: const InputDecoration(labelText: 'Tutor/a'),
+              items: tutors
+                  .map((t) => DropdownMenuItem(value: t['id'] as int, child: Text('${t['name']}')))
+                  .toList(),
+              onChanged: (v) => setState(() => tutorId = v),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+                controller: amount,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'Importe', prefixText: r'$ ')),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: method,
+              decoration: const InputDecoration(labelText: 'Medio de pago'),
+              items: const [
+                DropdownMenuItem(value: 'Transferencia', child: Text('Transferencia')),
+                DropdownMenuItem(value: 'Efectivo', child: Text('Efectivo')),
+              ],
+              onChanged: (v) => setState(() => method = v ?? 'Transferencia'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+                controller: note,
+                decoration: const InputDecoration(labelText: 'Observación (opcional)')),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+                onPressed: busy ? null : register,
+                icon: const Icon(Icons.check_circle),
+                label: const Text('Registrar pago')),
+            const SizedBox(height: 10),
+            const Text(
+                'Al guardar se asigna el próximo número correlativo de comprobante. Luego podés compartir el comprobante desde Historial.',
+                style: TextStyle(color: Colors.black54)),
+          ]);
+        },
+      );
 }
 
 class HistoryPage extends StatefulWidget {
@@ -466,11 +621,11 @@ class _HistoryPageState extends State<HistoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: FutureBuilder(
+      body: FutureBuilder<List<Map<String, Object?>>>(
         future: AppDb.instance.payments(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-          final payments = snapshot.data as List>;
+          final payments = snapshot.data!;
           if (payments.isEmpty) {
             return const Center(child: Text('No hay pagos registrados todavía.'));
           }
@@ -479,13 +634,14 @@ class _HistoryPageState extends State<HistoryPage> {
             itemCount: payments.length,
             itemBuilder: (context, i) {
               final p = payments[i];
-              final dateStr = p['date'] != null 
-                  ? DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(p['date'] as String)) 
+              final dateStr = p['date'] != null
+                  ? DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(p['date'] as String))
                   : '';
               return Card(
                 child: ListTile(
                   title: Text('Comprobante N.º ${p['receiptNo']} - ${money(p['amount'] as num)}'),
-                  subtitle: Text('Tutor/a: ${p['tutorName']}\nAlumno/a: ${p['studentName']}\nFecha: $dateStr\nMétodo: ${p['method']}'),
+                  subtitle: Text(
+                      'Tutor/a: ${p['tutorName']}\nAlumno/a: ${p['studentName']}\nFecha: $dateStr\nMétodo: ${p['method']}'),
                   isThreeLine: true,
                   trailing: IconButton(
                     icon: const Icon(Icons.share, color: navy),
@@ -508,7 +664,7 @@ class _HistoryPageState extends State<HistoryPage> {
         'Importe: ${money(p['amount'] as num)}\n'
         'Medio: ${p['method']}\n'
         'Fecha: ${p['date']}';
-    
+
     final phone = phoneDigits('${p['tutorPhone']}');
     if (phone.isNotEmpty) {
       final url = Uri.parse('https://wa.me/$phone?text=${Uri.encodeComponent(text)}');
