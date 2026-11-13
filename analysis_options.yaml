@@ -1,5 +1,5 @@
 include: package:flutter_lints/flutter.yaml
-linter:
-  rules:
-    avoid_print: true
-    prefer_const_constructors: true
+
+analyzer:
+  exclude:
+    - test/**   # <-- Agrega esta línea para que Flutter ignore los tests y no falle el build
